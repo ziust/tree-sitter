@@ -1,0 +1,20 @@
+{
+  "json.schemas": [
+    {
+      "fileMatch": [
+        "**/tree-sitter.json",
+      ],
+      "url": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
+    },
+  ],
+  "[javascript]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "vscode.typescript-language-features",
+  },
+  "[c]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+  },
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "sonarlint.pathToCompileCommands": "${workspaceFolder}\\compile_commands.json",
+}
