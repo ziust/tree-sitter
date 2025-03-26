@@ -47,10 +47,16 @@ module.exports = grammar({
 
     top_level_statement: $ => choice(
       $.struct_declaration,
+      $.enum_declaration,
+      $.type_declaration,
+      $.trait_declaration,
     ),
 
     statement: $ => choice(
       $.struct_declaration,
+      $.enum_declaration,
+      $.type_declaration,
+      $.trait_declaration,
     ),
 
     struct_declaration: $ => seq(
@@ -59,52 +65,180 @@ module.exports = grammar({
       $.identifier,
       optional($.template_parameters),
       optional($.generic_parameters),
+      choice(
+        seq(
+          '{',
+          repeat($.struct_member_declaration),
+          '}',
+        ),
+        ';',
+      ),
+    ),
+
+    struct_member_declaration: $ => seq(
+      $.identifier,
+      ':',
+      $.type,
+      ';',
+    ),
+
+    enum_declaration: $ => seq(
+      optional('pub'),
+      'enum',
+      $.identifier,
+      optional($.enum_member_declaration_parameter),
+      optional($.template_parameters),
+      optional($.generic_parameters),
       '{',
-      separatedRepeat($.struct_member_declaration, ';'),
+      repeat($.enum_member_declaration),
       '}',
+    ),
+
+    enum_member_declaration_parameter: $ => seq(
+      '(',
+      $.identifier,
+      ')',
+    ),
+
+    enum_member_declaration: $ => seq(
+      $.identifier,
+      optional($.enum_member_parameters),
+      optional(seq(
+        '=',
+        $.number,
+        // TODO: add comptime reference?
+      )),
+      ',',
+    ),
+
+    enum_member_parameters: $ => seq(
+      '(',
+      separatedRepeat1($.type),
+      ')',
+    ),
+
+    type_declaration: $ => seq(
+      optional('pub'),
+      'type',
+      $.identifier,
+      optional($.template_parameters),
+      optional($.generic_parameters),
+      '=',
+      $.type,
+    ),
+
+    trait_declaration: $ => seq(
+      optional('pub'),
+      'trait',
+      $.identifier,
+      optional($.generic_parameters),
+      choice(
+        seq(
+          '{',
+          repeat($.trait_member_declaration),
+          '}',
+        ),
+        ';',
+      ),
+    ),
+
+    trait_member_declaration: $ => choice(
+      $.trait_member_declaration_const,
+      $.trait_member_declaration_fn,
+    ),
+
+    trait_member_declaration_const: $ => seq(
+      'const',
+      $.identifier,
+      ':',
+      $.type,
+      ';'
+    ),
+
+    trait_member_declaration_fn: $ => seq(
+      'fn',
+      $.identifier,
+      optional($.template_parameters),
+      optional($.generic_parameters),
+      $.fn_parameters,
+      $.type,
+      ';'
     ),
 
     template_parameters: $ => seq(
       '[',
-      separatedRepeat($.type_parameter),
+      separatedRepeat($.template_parameter),
       ']',
+    ),
+
+    template_parameter: $ => seq(
+      $.identifier,
+      optional(seq(
+        ':',
+        $.template_parameter_or,
+      )),
+    ),
+
+    template_parameter_or: $ => separatedRepeat1($.template_parameter_and, '|'),
+
+    template_parameter_and: $ => separatedRepeat1($.template_parameter_item, '&'),
+
+    template_parameter_item: $ => choice(
+      $.template_parameter_parenthesis,
+      $.template_parameter_terminal,
+    ),
+
+    template_parameter_parenthesis: $ => seq(
+      '(',
+      $.template_parameter_or,
+      ')',
+    ),
+
+    template_parameter_terminal: $ => seq(
+      $.identifier,
+      optional($.template_arguments),
+      optional($.generic_arguments),
     ),
 
     generic_parameters: $ => seq(
       '<',
-      separatedRepeat($.type_parameter),
+      separatedRepeat($.generic_parameter),
       '>',
     ),
 
-    type_parameter: $ => seq(
+    generic_parameter: $ => seq(
       $.identifier,
       optional(seq(
         ':',
-        $.type_parameter_or,
+        $.generic_parameter_and,
       )),
     ),
 
-    type_parameter_or: $ => separatedRepeat1($.type_parameter_and, '|'),
+    generic_parameter_and: $ => separatedRepeat1($.generic_parameter_item, '&'),
 
-    type_parameter_and: $ => separatedRepeat1($.type_parameter_item, '&'),
-
-    type_parameter_item: $ => choice(
-      $.type_parameter_parenthesis,
-      $.type_parameter_terminal,
+    generic_parameter_item: $ => choice(
+      $.generic_parameter_parenthesis,
+      $.generic_parameter_terminal,
     ),
 
-    type_parameter_parenthesis: $ => seq(
+    generic_parameter_parenthesis: $ => seq(
       '(',
-      $.type_parameter_or,
+      $.generic_parameter_and,
       ')',
     ),
 
-    type_parameter_terminal: $ => seq(
+    generic_parameter_terminal: $ => seq(
       $.identifier,
       optional($.generic_arguments),
     ),
 
-    struct_member_declaration: $ => seq(
+    fn_parameters: $ => seq(
+      '(',
+      separatedRepeat($.fn_parameter),
+      ')',
+    ),
+
+    fn_parameter: $ => seq(
       $.identifier,
       ':',
       $.type,
