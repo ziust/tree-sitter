@@ -50,6 +50,9 @@ module.exports = grammar({
       $.enum_declaration,
       $.type_declaration,
       $.trait_declaration,
+      $.impl_declaration,
+      $.const_declaration,
+      $.fn_declaration,
     ),
 
     statement: $ => choice(
@@ -57,6 +60,11 @@ module.exports = grammar({
       $.enum_declaration,
       $.type_declaration,
       $.trait_declaration,
+      $.impl_declaration,
+      $.const_declaration,
+      $.fn_declaration,
+      $.let_declaration,
+      $.expression_statement,
     ),
 
     struct_declaration: $ => seq(
@@ -79,7 +87,7 @@ module.exports = grammar({
       $.identifier,
       ':',
       $.type,
-      ';',
+      ',',
     ),
 
     enum_declaration: $ => seq(
@@ -125,6 +133,7 @@ module.exports = grammar({
       optional($.generic_parameters),
       '=',
       $.type,
+      ';',
     ),
 
     trait_declaration: $ => seq(
@@ -152,7 +161,7 @@ module.exports = grammar({
       $.identifier,
       ':',
       $.type,
-      ';'
+      ';',
     ),
 
     trait_member_declaration_fn: $ => seq(
@@ -161,6 +170,7 @@ module.exports = grammar({
       optional($.template_parameters),
       optional($.generic_parameters),
       $.fn_parameters,
+      ':',
       $.type,
       ';'
     ),
@@ -176,6 +186,10 @@ module.exports = grammar({
       optional(seq(
         ':',
         $.template_parameter_or,
+      )),
+      optional(seq(
+        '=',
+        $.type,
       )),
     ),
 
@@ -212,6 +226,10 @@ module.exports = grammar({
         ':',
         $.generic_parameter_and,
       )),
+      optional(seq(
+        '=',
+        $.type,
+      )),
     ),
 
     generic_parameter_and: $ => separatedRepeat1($.generic_parameter_item, '&'),
@@ -238,10 +256,16 @@ module.exports = grammar({
       ')',
     ),
 
-    fn_parameter: $ => seq(
-      $.identifier,
-      ':',
-      $.type,
+    fn_parameter: $ => choice(
+      seq(
+        optional(seq('*', optional(choice('mut', 'const')),)),
+        'self',
+      ),
+      seq(
+        $.identifier,
+        ':',
+        $.type,
+      )
     ),
 
     type: $ => choice(
@@ -259,7 +283,7 @@ module.exports = grammar({
 
     type_pointer: $ => seq(
       '*',
-      choice('mut', 'const'),
+      optional(choice('mut', 'const')),
       $.type,
     ),
 
@@ -271,7 +295,7 @@ module.exports = grammar({
         // TODO: add comptime reference?
       )),
       ']',
-      choice('mut', 'const'),
+      optional(choice('mut', 'const')),
       $.type,
     ),
 
@@ -291,6 +315,149 @@ module.exports = grammar({
       '<',
       separatedRepeat($.type),
       '>',
+    ),
+
+    fn_arguments: $ => seq(
+      '(',
+      separatedRepeat($.expression),
+      ')',
+    ),
+
+    impl_declaration: $ => seq(
+      optional($.template_parameters),
+      optional($.generic_parameters),
+      'impl',
+      $.type,
+      optional(seq(
+        'for',
+        $.type,
+      )),
+      '{',
+      repeat($.impl_member_declaration),
+      '}',
+    ),
+
+    impl_member_declaration: $ => choice(
+      $.const_declaration,
+      $.fn_declaration,
+    ),
+
+    const_declaration: $ => seq(
+      'const',
+      $.identifier,
+      optional(seq(
+        ':',
+        $.type,
+      )),
+      '=',
+      $.expression,
+      ';',
+    ),
+
+    fn_declaration: $ => seq(
+      optional('pub'),
+      'fn',
+      $.identifier,
+      optional($.template_parameters),
+      optional($.generic_parameters),
+      $.fn_parameters,
+      ':',
+      $.type,
+      $.block_expression,
+    ),
+
+    block_expression: $ => seq(
+      '{',
+      repeat($.statement),
+      optional($.expression),
+      '}',
+    ),
+
+    expression_statement: $ => seq(
+      $.expression,
+      ';',
+    ),
+
+    let_declaration: $ => seq(
+      'let',
+      $.identifier,
+      optional(seq(
+        ':',
+        $.type,
+      )),
+      '=',
+      $.expression,
+      ';',
+    ),
+
+    expression: $ => choice(
+      $.builtin_function_call_expression,
+      $.member_expression,
+      // FIXME: add more expressions
+      $.literal,
+    ),
+
+    builtin_function_call_expression: $ => seq(
+      '@',
+      $.identifier,
+      optional($.template_parameters),
+      $.fn_arguments,
+    ),
+
+    member_expression: $ => prec.left(seq(
+      $.expression,
+      '.',
+      choice(
+        $.identifier,
+        '*',
+        seq('[', separatedRepeat1($.expression), ']'),
+        $.fn_arguments,
+      ),
+    )),
+
+    literal: $ => choice(
+      $.value_literal,
+      $.object_literal,
+      $.fn_arguments,
+      $.array_literal,
+    ),
+
+    object_literal: $ => seq(
+      $.identifier,
+      optional(seq(
+        ':',
+        ':',
+        optional($.template_parameters),
+        optional($.generic_parameters),
+      )),
+      '{',
+      separatedRepeat($.object_literal_member),
+      '}',
+    ),
+
+    object_literal_member: $ => choice(
+      $.object_literal_member_field,
+      $.object_literal_member_spread,
+    ),
+
+    object_literal_member_field: $ => seq(
+      $.identifier,
+      optional(seq(
+        ':',
+        $.expression,
+      )),
+    ),
+
+    object_literal_member_spread: $ => seq(
+      '.',
+      '.',
+      $.expression,
+    ),
+
+    array_literal: $ => seq(
+      '[',
+      separatedRepeat($.expression),
+      ']',
     ),
 
     // Basic tokens
