@@ -45,6 +45,11 @@ module.exports = grammar({
   conflicts: $ => [
     [$.const_reference_member, $.simple_expression],
     [$.if_statement, $.expression],
+    [$.loop_statement, $.expression],
+    [$.match_statement, $.expression],
+    [$.return_expression],
+    [$.break_expression],
+    [$.continue_expression],
   ],
 
   rules: {
@@ -60,9 +65,18 @@ module.exports = grammar({
       $.fn_declaration,
       $.let_declaration,
       $.null_statement,
+      $.deferrable_statement,
+      $.defer_statement,
+    ),
+
+    deferrable_statement: $ => choice(
       $.expression_statement,
       $.assignment_statement,
       $.if_statement,
+      $.for_statement,
+      $.while_statement,
+      $.loop_statement,
+      $.match_statement,
     ),
 
     struct_declaration: $ => seq(
@@ -380,6 +394,7 @@ module.exports = grammar({
     ),
 
     block_expression: $ => seq(
+      optional(seq($.label, ':')),
       '{',
       repeat($.statement),
       optional($.expression),
@@ -414,10 +429,38 @@ module.exports = grammar({
 
     if_statement: $ => $.if_expression,
 
+    for_statement: $ => seq(
+      'for',
+      $.pattern,
+      'in',
+      $.simple_expression,
+      $.block_expression,
+    ),
+
+    while_statement: $ => seq(
+      'while',
+      $.simple_expression,
+      $.block_expression,
+    ),
+
+    loop_statement: $ => $.loop_expression,
+
+    match_statement: $ => $.match_expression,
+
+    defer_statement: $ => seq(
+      'defer',
+      $.deferrable_statement,
+    ),
+
     expression: $ => choice(
       $.simple_expression,
       $.block_expression,
       $.if_expression,
+      $.loop_expression,
+      $.match_expression,
+      $.return_expression,
+      $.break_expression,
+      $.continue_expression,
       // FIXME: add more expressions
     ),
 
@@ -509,6 +552,55 @@ module.exports = grammar({
         ':',
         $.pattern,
       )),
+    ),
+
+    loop_expression: $ => seq(
+      'loop',
+      optional(seq($.label, ':')),
+      '{',
+      repeat($.statement),
+      '}'
+    ),
+
+    match_expression: $ => seq(
+      'match',
+      $.simple_expression,
+      optional(seq($.label, ':')),
+      '{',
+      repeat($.match_arm),
+      '}',
+    ),
+
+    match_arm: $ => seq(
+      $.pattern,
+      optional(seq(
+        'if',
+        $.simple_expression,
+      )),
+      '=>',
+      $.expression,
+      ',',
+    ),
+
+    return_expression: $ => seq(
+      'return',
+      optional($.expression),
+    ),
+
+    break_expression: $ => seq(
+      'break',
+      optional($.label),
+      optional($.expression),
+    ),
+
+    continue_expression: $ => seq(
+      'continue',
+      optional($.label),
+    ),
+
+    label: $ => seq(
+      "'",
+      $.identifier,
     ),
 
     literal: $ => choice(
