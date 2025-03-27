@@ -43,7 +43,7 @@ module.exports = grammar({
   ],
 
   conflicts: $ => [
-    [$.const_reference_member, $.expression_body],
+    [$.const_reference_member, $.simple_expression],
     [$.if_statement, $.expression],
   ],
 
@@ -415,14 +415,14 @@ module.exports = grammar({
     if_statement: $ => $.if_expression,
 
     expression: $ => choice(
-      seq($.expression_body, optional($.turbofish)),
+      $.simple_expression,
       $.block_expression,
       $.if_expression,
       // FIXME: add more expressions
-      $.literal,
     ),
 
-    expression_body: $ => choice(
+    simple_expression: $ => choice(
+      $.literal,
       $.builtin_function_call_expression,
       $.member_expression,
       $.const_reference,
@@ -436,9 +436,9 @@ module.exports = grammar({
     ),
 
     member_expression: $ => prec.left(seq(
-      $.expression_body,
+      $.simple_expression,
       choice(
-        seq('.', $.identifier),
+        seq('.', $.identifier, optional($.turbofish)),
         seq('.', '*'),
         seq('.', '&'),
         seq('.', $.number),
@@ -473,7 +473,7 @@ module.exports = grammar({
 
     if_condition: $ => choice(
       $.if_condition_let,
-      $.expression,
+      $.simple_expression,
     ),
 
     if_condition_let: $ => seq(
