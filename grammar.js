@@ -44,6 +44,7 @@ module.exports = grammar({
 
   conflicts: $ => [
     [$.const_reference_member, $.expression_body],
+    [$.if_statement, $.expression],
   ],
 
   rules: {
@@ -58,7 +59,10 @@ module.exports = grammar({
       $.const_declaration,
       $.fn_declaration,
       $.let_declaration,
+      $.null_statement,
       $.expression_statement,
+      $.assignment_statement,
+      $.if_statement,
     ),
 
     struct_declaration: $ => seq(
@@ -382,11 +386,6 @@ module.exports = grammar({
       '}',
     ),
 
-    expression_statement: $ => seq(
-      $.expression,
-      ';',
-    ),
-
     let_declaration: $ => seq(
       'let',
       $.identifier,
@@ -399,17 +398,34 @@ module.exports = grammar({
       ';',
     ),
 
-    expression: $ => seq(
-      $.expression_body,
-      optional($.turbofish),
+    null_statement: _ => ';',
+
+    expression_statement: $ => seq(
+      $.expression,
+      ';',
+    ),
+
+    assignment_statement: $ => seq(
+      $.expression,
+      '=',
+      $.expression,
+      ';',
+    ),
+
+    if_statement: $ => $.if_expression,
+
+    expression: $ => choice(
+      seq($.expression_body, optional($.turbofish)),
+      $.block_expression,
+      $.if_expression,
+      // FIXME: add more expressions
+      $.literal,
     ),
 
     expression_body: $ => choice(
       $.builtin_function_call_expression,
       $.member_expression,
       $.const_reference,
-      // FIXME: add more expressions
-      $.literal,
     ),
 
     builtin_function_call_expression: $ => seq(
@@ -437,6 +453,62 @@ module.exports = grammar({
         seq($.template_parameters, optional($.generic_parameters)),
         $.generic_parameters
       ),
+    ),
+
+    if_expression: $ => seq(
+      'if',
+      $.if_condition,
+      $.block_expression,
+      repeat(seq(
+        'else',
+        'if',
+        $.if_condition,
+        $.block_expression,
+      )),
+      optional(seq(
+        'else',
+        $.block_expression,
+      )),
+    ),
+
+    if_condition: $ => choice(
+      $.if_condition_let,
+      $.expression,
+    ),
+
+    if_condition_let: $ => seq(
+      'let',
+      $.pattern,
+      '=',
+      $.expression,
+    ),
+
+    pattern: $ => choice(
+      $.identifier,
+      $.pattern_enum,
+      $.pattern_struct,
+    ),
+
+    pattern_enum: $ => seq(
+      $.const_reference,
+      '(',
+      separatedRepeat1($.pattern),
+      ')',
+    ),
+
+    pattern_struct: $ => seq(
+      $.const_reference,
+      '{',
+      separatedRepeat1($.pattern_struct_member),
+      '}',
+    ),
+
+    pattern_struct_member: $ => seq(
+      $.identifier,
+      optional(seq(
+        ':',
+        $.pattern,
+      )),
     ),
 
     literal: $ => choice(
