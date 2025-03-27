@@ -49,3 +49,4 @@ zig-out/
 
 # Custom
 /src
+/Cargo.lock

@@ -42,18 +42,12 @@ module.exports = grammar({
     /\s/,
   ],
 
-  rules: {
-    program: $ => repeat($.top_level_statement),
+  conflicts: $ => [
+    [$.const_reference_member, $.expression_body],
+  ],
 
-    top_level_statement: $ => choice(
-      $.struct_declaration,
-      $.enum_declaration,
-      $.type_declaration,
-      $.trait_declaration,
-      $.impl_declaration,
-      $.const_declaration,
-      $.fn_declaration,
-    ),
+  rules: {
+    program: $ => repeat($.statement),
 
     statement: $ => choice(
       $.struct_declaration,
@@ -104,7 +98,7 @@ module.exports = grammar({
 
     enum_member_declaration_parameter: $ => seq(
       '(',
-      $.identifier,
+      $.const_reference,
       ')',
     ),
 
@@ -125,6 +119,20 @@ module.exports = grammar({
       ')',
     ),
 
+    const_reference: $ => choice(
+      $.const_reference_member,
+      $.identifier,
+    ),
+
+    const_reference_member: $ => prec.left(seq(
+      $.const_reference,
+      '.',
+      choice(
+        $.identifier,
+        $.number,
+      ),
+    )),
+
     type_declaration: $ => seq(
       optional('pub'),
       'type',
@@ -140,7 +148,7 @@ module.exports = grammar({
       optional('pub'),
       'trait',
       $.identifier,
-      optional($.generic_parameters),
+      optional($.template_parameters),
       choice(
         seq(
           '{',
@@ -177,7 +185,7 @@ module.exports = grammar({
 
     template_parameters: $ => seq(
       '[',
-      separatedRepeat($.template_parameter),
+      separatedRepeat1($.template_parameter),
       ']',
     ),
 
@@ -209,14 +217,14 @@ module.exports = grammar({
     ),
 
     template_parameter_terminal: $ => seq(
-      $.identifier,
+      $.const_reference,
       optional($.template_arguments),
       optional($.generic_arguments),
     ),
 
     generic_parameters: $ => seq(
       '<',
-      separatedRepeat($.generic_parameter),
+      separatedRepeat1($.generic_parameter),
       '>',
     ),
 
@@ -246,7 +254,7 @@ module.exports = grammar({
     ),
 
     generic_parameter_terminal: $ => seq(
-      $.identifier,
+      $.const_reference,
       optional($.generic_arguments),
     ),
 
@@ -300,7 +308,7 @@ module.exports = grammar({
     ),
 
     type_terminal: $ => seq(
-      $.identifier,
+      $.const_reference,
       optional($.template_arguments),
       optional($.generic_arguments),
     ),
@@ -324,14 +332,14 @@ module.exports = grammar({
     ),
 
     impl_declaration: $ => seq(
+      'impl',
       optional($.template_parameters),
       optional($.generic_parameters),
-      'impl',
-      $.type,
       optional(seq(
-        'for',
         $.type,
+        'for',
       )),
+      $.type,
       '{',
       repeat($.impl_member_declaration),
       '}',
@@ -343,6 +351,7 @@ module.exports = grammar({
     ),
 
     const_declaration: $ => seq(
+      optional('pub'),
       'const',
       $.identifier,
       optional(seq(
@@ -390,9 +399,15 @@ module.exports = grammar({
       ';',
     ),
 
-    expression: $ => choice(
+    expression: $ => seq(
+      $.expression_body,
+      optional($.turbofish),
+    ),
+
+    expression_body: $ => choice(
       $.builtin_function_call_expression,
       $.member_expression,
+      $.const_reference,
       // FIXME: add more expressions
       $.literal,
     ),
@@ -405,42 +420,51 @@ module.exports = grammar({
     ),
 
     member_expression: $ => prec.left(seq(
-      $.expression,
-      '.',
+      $.expression_body,
       choice(
-        $.identifier,
-        '*',
+        seq('.', $.identifier),
+        seq('.', '*'),
+        seq('.', '&'),
+        seq('.', $.number),
         seq('[', separatedRepeat1($.expression), ']'),
-        $.fn_arguments,
+        seq(optional($.turbofish), $.fn_arguments),
       ),
     )),
 
+    turbofish: $ => seq(
+      '::',
+      choice(
+        seq($.template_parameters, optional($.generic_parameters)),
+        $.generic_parameters
+      ),
+    ),
+
     literal: $ => choice(
+      $.number,
+      $.string,
       $.value_literal,
-      $.object_literal,
+      $.struct_literal,
       $.fn_arguments,
       $.array_literal,
     ),
 
-    object_literal: $ => seq(
-      $.identifier,
+    struct_literal: $ => seq(
+      '#',
       optional(seq(
-        ':',
-        ':',
-        optional($.template_parameters),
-        optional($.generic_parameters),
+        $.const_reference,
+        optional($.turbofish),
       )),
       '{',
-      separatedRepeat($.object_literal_member),
+      separatedRepeat($.struct_literal_member),
       '}',
     ),
 
-    object_literal_member: $ => choice(
-      $.object_literal_member_field,
-      $.object_literal_member_spread,
+    struct_literal_member: $ => choice(
+      $.struct_literal_member_field,
+      $.struct_literal_member_spread,
     ),
 
-    object_literal_member_field: $ => seq(
+    struct_literal_member_field: $ => seq(
       $.identifier,
       optional(seq(
         ':',
@@ -448,9 +472,8 @@ module.exports = grammar({
       )),
     ),
 
-    object_literal_member_spread: $ => seq(
-      '.',
-      '.',
+    struct_literal_member_spread: $ => seq(
+      '..',
       $.expression,
     ),
 
@@ -462,7 +485,7 @@ module.exports = grammar({
 
     // Basic tokens
     identifier: _ => /[a-zA-Z_$][a-zA-Z0-9_$]*/,
-    number: _ => /0|[1-9]\d*(\\.\d+)?([eE]-?\d+)?|0[bB][01]+|0[oO][0-7]+|0[xX][0-9a-f]+/,
+    number: _ => /(0|[1-9]\d*)(\.\d+)?([eE][+-]?\d+)?|0[bB][01]+|0[oO][0-7]+|0[xX][0-9a-f]+/,
     string: _ => /"([^"\\]|\\.)*"/,
     value_literal: _ => /true|false|null|undefined/,
     comment: _ => token(choice(
