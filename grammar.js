@@ -481,6 +481,7 @@ module.exports = grammar({
     simple_expression: $ => choice(
       $.literal,
       $.builtin_function_call_expression,
+      $.macro_call,
       $.member_expression,
       $.const_reference,
     ),
@@ -490,6 +491,81 @@ module.exports = grammar({
       $.identifier,
       optional($.template_parameters),
       $.fn_arguments,
+    ),
+
+    macro_call: $ => choice(
+      $.macro_call_parenthesis,
+      $.macro_call_brace,
+      $.macro_call_square_bracket,
+      $.macro_call_angle_bracket,
+    ),
+
+    macro_call_parenthesis: $ => seq(
+      $.const_reference,
+      '!',
+      $.group_parenthesis,
+    ),
+
+    group_parenthesis: $ => seq(
+      '(',
+      repeat($.group_parenthesis_content),
+      ')',
+    ),
+
+    group_parenthesis_content: $ => choice(
+      $.group_parenthesis,
+      /[^()]+/,
+    ),
+
+    macro_call_brace: $ => seq(
+      $.const_reference,
+      '!',
+      $.group_brace,
+    ),
+
+    group_brace: $ => seq(
+      '{',
+      repeat($.group_brace_content),
+      '}',
+    ),
+
+    group_brace_content: $ => choice(
+      $.group_brace,
+      /[^{}]+/,
+    ),
+
+    macro_call_square_bracket: $ => seq(
+      $.const_reference,
+      '!',
+      $.group_square_bracket,
+    ),
+
+    group_square_bracket: $ => seq(
+      '[',
+      repeat($.group_square_bracket_content),
+      ']',
+    ),
+
+    group_square_bracket_content: $ => choice(
+      $.group_square_bracket,
+      /[^\[\]]+/,
+    ),
+
+    macro_call_angle_bracket: $ => seq(
+      $.const_reference,
+      '!',
+      $.group_angle_bracket,
+    ),
+
+    group_angle_bracket: $ => seq(
+      '<',
+      repeat($.group_angle_bracket_content),
+      '>',
+    ),
+
+    group_angle_bracket_content: $ => choice(
+      $.group_angle_bracket,
+      /[^<>]+/,
     ),
 
     member_expression: $ => prec.left(seq(
