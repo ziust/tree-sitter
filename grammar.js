@@ -253,7 +253,7 @@ module.exports = grammar({
       $.identifier,
       optional(seq(
         ':',
-        $.generic_parameter_and,
+        $.generic_parameter_item,
       )),
       optional(seq(
         '=',
@@ -261,16 +261,14 @@ module.exports = grammar({
       )),
     ),
 
-    generic_parameter_and: $ => separatedRepeat1($.generic_parameter_item, '&'),
-
     generic_parameter_item: $ => choice(
-      $.generic_parameter_parenthesis,
+      $.generic_parameter_tuple,
       $.generic_parameter_terminal,
     ),
 
-    generic_parameter_parenthesis: $ => seq(
+    generic_parameter_tuple: $ => seq(
       '(',
-      $.generic_parameter_and,
+      separatedRepeat1($.generic_parameter_terminal),
       ')',
     ),
 
