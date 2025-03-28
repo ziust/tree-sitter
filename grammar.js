@@ -43,20 +43,27 @@ module.exports = grammar({
   ],
 
   conflicts: $ => [
-    [$.const_reference_member, $.simple_expression],
+    [$.const_reference_member, $.simple_expression], // ident.ident
+
+    // expression as statement
     [$.block_statement, $.expression],
     [$.if_statement, $.expression],
     [$.loop_statement, $.expression],
     [$.match_statement, $.expression],
+
+    // if let a = return { ...
     [$.return_expression],
     [$.break_expression],
     [$.continue_expression],
-    [$.const_reference, $.template_parameter],
+
+    [$.const_reference, $.template_parameter], // `impl[_] T {` or `impl [_]const T {`
   ],
 
   rules: {
-    program: $ => repeat($.statement),
+    // top level module
+    module: $ => repeat($.statement),
 
+    // statements are blocks, or ends with ';'
     statement: $ => choice(
       $.struct_declaration,
       $.enum_declaration,
@@ -73,6 +80,7 @@ module.exports = grammar({
       $.attribute_statement,
     ),
 
+    // only deferrable_statements can be used after 'defer', 'errdefer'
     deferrable_statement: $ => choice(
       $.expression_statement,
       $.assignment_statement,
@@ -83,36 +91,38 @@ module.exports = grammar({
       $.match_statement,
     ),
 
+    // struct is user-defined data type that may contain multiple members
     struct_declaration: $ => seq(
-      optional('pub'),
+      optional('pub'), // pub to make this struct visible to others
       'struct',
-      $.identifier,
-      optional($.template_parameters),
-      optional($.generic_parameters),
+      $.identifier, // struct name
+      optional($.template_parameters), // template is like in C++
+      optional($.generic_parameters), // generic is like in Java
       choice(
         seq(
           '{',
           repeat($.struct_member_declaration),
           '}',
         ),
-        ';',
+        ';', // empty struct for type to be used as other template argument
       ),
     ),
 
     struct_member_declaration: $ => seq(
-      repeat($.attribute),
-      optional('pub'),
-      $.identifier,
+      repeat($.attribute), // per-member attributes
+      optional('pub'), // pub to make this member visible in other modules
+      $.identifier, // member name
       ':',
       $.type,
       ',',
     ),
 
+    // enum is a tagged union represents one of several variants
     enum_declaration: $ => seq(
       optional('pub'),
       'enum',
-      $.identifier,
-      optional($.enum_member_declaration_parameter),
+      $.identifier, // enum name
+      optional($.enum_member_declaration_parameter), // enum tag type
       optional($.template_parameters),
       optional($.generic_parameters),
       '{',
@@ -120,6 +130,7 @@ module.exports = grammar({
       '}',
     ),
 
+    // (u8) in `enum MyEnum(u8) { MAX = 255 }`
     enum_member_declaration_parameter: $ => seq(
       '(',
       $.const_reference,
@@ -127,22 +138,24 @@ module.exports = grammar({
     ),
 
     enum_member_declaration: $ => seq(
-      repeat($.attribute),
-      $.identifier,
-      optional($.enum_member_parameters),
+      repeat($.attribute), // per-variant attributes
+      $.identifier, // variant name
+      optional($.enum_member_parameters), // per-variant data
       optional(seq(
         '=',
-        $.expression,
+        $.expression, // enum tag value
       )),
       ',',
     ),
 
+    // (T) in `enum Option[T] { None, Some(T), }`
     enum_member_parameters: $ => seq(
       '(',
       separatedRepeat1($.type),
       ')',
     ),
 
+    // reference to compile time constants such as type, constant value
     const_reference: $ => choice(
       $.const_reference_member,
       $.identifier,
@@ -157,6 +170,7 @@ module.exports = grammar({
       ),
     )),
 
+    // type alias for struct, enum, trait, tuple, reference, pointer, array, ...
     type_declaration: $ => seq(
       optional('pub'),
       'type',
@@ -168,6 +182,7 @@ module.exports = grammar({
       ';',
     ),
 
+    // trait is like interface allows polymorphism
     trait_declaration: $ => seq(
       optional('pub'),
       'trait',
@@ -183,6 +198,7 @@ module.exports = grammar({
       ),
     ),
 
+    // trait may force types to have some constant variables and/or functions
     trait_member_declaration: $ => choice(
       $.trait_member_declaration_const,
       $.trait_member_declaration_fn,
@@ -209,12 +225,14 @@ module.exports = grammar({
       ';'
     ),
 
+    // contents in template will be generated for each of their usage
     template_parameters: $ => seq(
       '[',
       separatedRepeat1($.template_parameter),
       ']',
     ),
 
+    // each template parameter can be combination of traits or concrete types
     template_parameter: $ => seq(
       $.identifier,
       optional(seq(
@@ -227,8 +245,10 @@ module.exports = grammar({
       )),
     ),
 
+    // or-parameter will be checked for each member
     template_parameter_or: $ => separatedRepeat1($.template_parameter_and, '|'),
 
+    // and-parameter may contain traits only
     template_parameter_and: $ => separatedRepeat1($.template_parameter_item, '&'),
 
     template_parameter_item: $ => choice(
@@ -248,6 +268,8 @@ module.exports = grammar({
       optional($.generic_arguments),
     ),
 
+    // contents of generic will not be generated for each of their usage,
+    // so it can be combination of traits by and only, or tuple of this recursively
     generic_parameters: $ => seq(
       '<',
       separatedRepeat1($.generic_parameter),
@@ -266,6 +288,7 @@ module.exports = grammar({
       )),
     ),
 
+    // terminal: single vtable, tuple: multiple vtables
     generic_parameter_item: $ => choice(
       $.generic_parameter_tuple,
       $.generic_parameter_terminal,
@@ -277,7 +300,9 @@ module.exports = grammar({
       ')',
     ),
 
-    generic_parameter_terminal: $ => seq(
+    generic_parameter_terminal: $ => separatedRepeat1($.generic_parameter_terminal_item, '&'),
+
+    generic_parameter_terminal_item: $ => seq(
       $.const_reference,
       optional($.generic_arguments),
     ),
