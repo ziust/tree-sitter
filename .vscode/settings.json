@@ -17,4 +17,12 @@
   },
   "C_Cpp.intelliSenseEngine": "disabled",
   "sonarlint.pathToCompileCommands": "${workspaceFolder}\\compile_commands.json",
+  "cSpell.words": [
+    "Ziust",
+    "Juyeong",
+    "Maing",
+    "prec",
+    "turbofish",
+    "errdefer",
+  ],
 }
