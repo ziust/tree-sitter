@@ -51,6 +51,7 @@ module.exports = grammar({
     [$.return_expression],
     [$.break_expression],
     [$.continue_expression],
+    [$.const_reference, $.template_parameter],
   ],
 
   rules: {
@@ -127,8 +128,7 @@ module.exports = grammar({
       optional($.enum_member_parameters),
       optional(seq(
         '=',
-        $.number,
-        // TODO: add comptime reference?
+        $.expression,
       )),
       ',',
     ),
@@ -139,7 +139,6 @@ module.exports = grammar({
       ')',
     ),
 
-    // TODO: remove const_reference
     const_reference: $ => choice(
       $.const_reference_member,
       $.identifier,
@@ -285,7 +284,7 @@ module.exports = grammar({
 
     fn_parameter: $ => choice(
       seq(
-        optional(seq('*', optional(choice('mut', 'const')),)),
+        optional(seq('&', choice('mut', 'const'),)),
         'self',
       ),
       seq(
@@ -297,6 +296,7 @@ module.exports = grammar({
 
     type: $ => choice(
       $.type_tuple,
+      $.type_reference,
       $.type_pointer,
       $.type_array,
       $.type_terminal,
@@ -308,9 +308,15 @@ module.exports = grammar({
       ')',
     ),
 
+    type_reference: $ => seq(
+      '&',
+      choice('mut', 'const'),
+      $.type,
+    ),
+
     type_pointer: $ => seq(
       '*',
-      optional(choice('mut', 'const')),
+      choice('mut', 'const'),
       $.type,
     ),
 
@@ -318,11 +324,10 @@ module.exports = grammar({
       '[',
       optional(choice(
         '*',
-        $.number,
-        // TODO: add comptime reference?
+        $.expression,
       )),
       ']',
-      optional(choice('mut', 'const')),
+      choice('mut', 'const'),
       $.type,
     ),
 
