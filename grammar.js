@@ -70,6 +70,7 @@ module.exports = grammar({
       $.deferrable_statement,
       $.defer_statement,
       $.errdefer_statement,
+      $.attribute_statement,
     ),
 
     deferrable_statement: $ => choice(
@@ -99,6 +100,8 @@ module.exports = grammar({
     ),
 
     struct_member_declaration: $ => seq(
+      repeat($.attribute),
+      optional('pub'),
       $.identifier,
       ':',
       $.type,
@@ -124,6 +127,7 @@ module.exports = grammar({
     ),
 
     enum_member_declaration: $ => seq(
+      repeat($.attribute),
       $.identifier,
       optional($.enum_member_parameters),
       optional(seq(
@@ -185,6 +189,7 @@ module.exports = grammar({
     ),
 
     trait_member_declaration_const: $ => seq(
+      repeat($.attribute),
       'const',
       $.identifier,
       ':',
@@ -193,6 +198,7 @@ module.exports = grammar({
     ),
 
     trait_member_declaration_fn: $ => seq(
+      repeat($.attribute),
       'fn',
       $.identifier,
       optional($.template_parameters),
@@ -409,6 +415,7 @@ module.exports = grammar({
 
     let_declaration: $ => seq(
       'let',
+      optional('mut'),
       $.identifier,
       optional(seq(
         ':',
@@ -471,6 +478,23 @@ module.exports = grammar({
       $.deferrable_statement,
     ),
 
+    attribute_statement: $ => seq(
+      $.attribute,
+      $.statement,
+    ),
+
+    attribute: $ => seq(
+      '#',
+      '[',
+      separatedRepeat1($.attribute_member),
+      ']',
+    ),
+
+    attribute_member: $ => seq(
+      $.const_reference,
+      optional($.group),
+    ),
+
     expression: $ => choice(
       $.simple_expression,
       $.block_expression,
@@ -498,17 +522,17 @@ module.exports = grammar({
       $.fn_arguments,
     ),
 
-    macro_call: $ => choice(
-      $.macro_call_parenthesis,
-      $.macro_call_brace,
-      $.macro_call_square_bracket,
-      $.macro_call_angle_bracket,
-    ),
-
-    macro_call_parenthesis: $ => seq(
+    macro_call: $ => seq(
       $.const_reference,
       '!',
+      $.group,
+    ),
+
+    group: $ => choice(
       $.group_parenthesis,
+      $.group_brace,
+      $.group_square_bracket,
+      $.group_angle_bracket,
     ),
 
     group_parenthesis: $ => seq(
@@ -519,13 +543,8 @@ module.exports = grammar({
 
     group_parenthesis_content: $ => choice(
       $.group_parenthesis,
-      /[^()]+/,
-    ),
-
-    macro_call_brace: $ => seq(
-      $.const_reference,
-      '!',
-      $.group_brace,
+      $.string,
+      /[^()"]+/,
     ),
 
     group_brace: $ => seq(
@@ -536,13 +555,8 @@ module.exports = grammar({
 
     group_brace_content: $ => choice(
       $.group_brace,
-      /[^{}]+/,
-    ),
-
-    macro_call_square_bracket: $ => seq(
-      $.const_reference,
-      '!',
-      $.group_square_bracket,
+      $.string,
+      /[^{}"]+/,
     ),
 
     group_square_bracket: $ => seq(
@@ -553,13 +567,8 @@ module.exports = grammar({
 
     group_square_bracket_content: $ => choice(
       $.group_square_bracket,
-      /[^\[\]]+/,
-    ),
-
-    macro_call_angle_bracket: $ => seq(
-      $.const_reference,
-      '!',
-      $.group_angle_bracket,
+      $.string,
+      /[^\[\]"]+/,
     ),
 
     group_angle_bracket: $ => seq(
@@ -570,7 +579,8 @@ module.exports = grammar({
 
     group_angle_bracket_content: $ => choice(
       $.group_angle_bracket,
-      /[^<>]+/,
+      $.string,
+      /[^<>"]+/,
     ),
 
     member_expression: $ => prec.left(seq(
@@ -594,6 +604,7 @@ module.exports = grammar({
     ),
 
     if_expression: $ => seq(
+      optional('const'),
       'if',
       $.if_condition,
       $.block_expression,
