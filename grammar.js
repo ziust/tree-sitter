@@ -44,6 +44,7 @@ module.exports = grammar({
 
   conflicts: $ => [
     [$.const_reference_member, $.simple_expression],
+    [$.block_statement, $.expression],
     [$.if_statement, $.expression],
     [$.loop_statement, $.expression],
     [$.match_statement, $.expression],
@@ -67,6 +68,7 @@ module.exports = grammar({
       $.null_statement,
       $.deferrable_statement,
       $.defer_statement,
+      $.errdefer_statement,
     ),
 
     deferrable_statement: $ => choice(
@@ -137,6 +139,7 @@ module.exports = grammar({
       ')',
     ),
 
+    // TODO: remove const_reference
     const_reference: $ => choice(
       $.const_reference_member,
       $.identifier,
@@ -427,6 +430,13 @@ module.exports = grammar({
       ';',
     ),
 
+    block_statement: $ => seq(
+      optional(seq($.label, ':')),
+      '{',
+      repeat($.statement),
+      '}',
+    ),
+
     if_statement: $ => $.if_expression,
 
     for_statement: $ => seq(
@@ -449,6 +459,12 @@ module.exports = grammar({
 
     defer_statement: $ => seq(
       'defer',
+      optional($.label),
+      $.deferrable_statement,
+    ),
+
+    errdefer_statement: $ => seq(
+      'errdefer',
       $.deferrable_statement,
     ),
 
