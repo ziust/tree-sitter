@@ -23,6 +23,7 @@
     "Maing",
     "prec",
     "turbofish",
-    "errdefer",
+    "vtable",
+    "vtables",
   ],
 }

@@ -230,7 +230,7 @@ module.exports = grammar({
       $.fn_parameters,
       ':',
       $.type,
-      ';'
+      ';',
     ),
 
     // contents in template will be generated for each of their usage
@@ -248,7 +248,7 @@ module.exports = grammar({
         $.template_parameter_or,
       )),
       optional(seq(
-        '=',
+        '=', // default type
         $.type,
       )),
     ),
@@ -288,42 +288,12 @@ module.exports = grammar({
       $.identifier,
       optional(seq(
         ':',
-        $.generic_parameter_item,
+        $.generic_argument,
       )),
       optional(seq(
         '=',
         $.generic_argument,
       )),
-    ),
-
-    // terminal: single vtable, tuple: multiple vtables
-    generic_parameter_item: $ => choice(
-      $.generic_parameter_terminal,
-      $.generic_parameter_tuple,
-      $.generic_parameter_array,
-    ),
-
-    generic_parameter_tuple: $ => seq(
-      '(',
-      separatedRepeat1($.generic_parameter_tuple_item),
-      ')',
-    ),
-
-    generic_parameter_tuple_item: $ => choice(
-      $.generic_parameter_array,
-    ),
-
-    generic_parameter_array: $ => seq(
-      '[',
-      separatedRepeat1($.generic_parameter_item),
-      ']',
-    ),
-
-    generic_parameter_terminal: $ => separatedRepeat1($.generic_parameter_terminal_item, '&', false),
-
-    generic_parameter_terminal_item: $ => seq(
-      $.const_reference,
-      optional($.generic_arguments),
     ),
 
     fn_parameters: $ => seq(
@@ -333,10 +303,12 @@ module.exports = grammar({
     ),
 
     fn_parameter: $ => choice(
+      // self (must be first parameter)
       seq(
         optional(seq(choice('&', '*'), choice('mut', 'const'))),
         'self',
       ),
+      // other
       seq(
         $.identifier,
         ':',
@@ -345,7 +317,7 @@ module.exports = grammar({
     ),
 
     type: $ => choice(
-      '!',
+      '!', // never
       $.type_item,
     ),
 
@@ -406,26 +378,16 @@ module.exports = grammar({
       '>',
     ),
 
+    // terminal: points single vtable, tuple: points array of multiple vtables
     generic_argument: $ => choice(
       $.generic_argument_terminal,
       $.generic_argument_tuple,
-      $.generic_argument_array,
     ),
 
     generic_argument_tuple: $ => seq(
       '(',
-      separatedRepeat1($.generic_argument_tuple_item),
-      ')',
-    ),
-
-    generic_argument_tuple_item: $ => choice(
-      $.generic_argument_array,
-    ),
-
-    generic_argument_array: $ => seq(
-      '[',
       separatedRepeat1($.generic_argument),
-      ']',
+      ')',
     ),
 
     generic_argument_terminal: $ => separatedRepeat1($.generic_argument_terminal_item, '&', false),
@@ -574,7 +536,7 @@ module.exports = grammar({
     ),
 
     attribute: $ => seq(
-      '#',
+      '!',
       '[',
       separatedRepeat1($.attribute_member),
       ']',
@@ -601,10 +563,17 @@ module.exports = grammar({
 
     simple_expression: $ => choice(
       $.literal,
+      $.parenthesised_expression,
       $.builtin_function_call_expression,
       $.macro_call,
       $.member_expression,
       $.const_reference,
+    ),
+
+    parenthesised_expression: $ => seq(
+      '(',
+      $.expression,
+      ')',
     ),
 
     builtin_function_call_expression: $ => seq(
@@ -757,7 +726,7 @@ module.exports = grammar({
       optional(seq($.label, ':')),
       '{',
       repeat($.statement),
-      '}'
+      '}',
     ),
 
     match_expression: $ => seq(
@@ -825,7 +794,7 @@ module.exports = grammar({
       $.string,
       $.value_literal,
       $.struct_literal,
-      $.fn_arguments,
+      $.tuple_literal,
       $.array_literal,
     ),
 
@@ -858,7 +827,15 @@ module.exports = grammar({
       $.expression,
     ),
 
+    tuple_literal: $ => seq(
+      '#',
+      '(',
+      separatedRepeat($.expression),
+      ')',
+    ),
+
     array_literal: $ => seq(
+      '#',
       '[',
       separatedRepeat($.expression),
       ']',
