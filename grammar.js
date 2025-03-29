@@ -57,6 +57,7 @@ module.exports = grammar({
     [$.continue_expression],
 
     [$.const_reference, $.template_parameter], // `impl[_] T {` or `impl [_]const T {`
+    [$.let_declaration, $.pattern], // let and let-else
   ],
 
   rules: {
@@ -73,10 +74,11 @@ module.exports = grammar({
       $.const_declaration,
       $.fn_declaration,
       $.let_declaration,
+      $.let_else_declaration,
       $.null_statement,
       $.deferrable_statement,
       $.defer_statement,
-      $.errdefer_statement,
+      $.test_statement,
       $.attribute_statement,
     ),
 
@@ -326,6 +328,11 @@ module.exports = grammar({
     ),
 
     type: $ => choice(
+      '!',
+      $.type_item,
+    ),
+
+    type_item: $ => choice(
       $.type_tuple,
       $.type_reference,
       $.type_pointer,
@@ -342,13 +349,13 @@ module.exports = grammar({
     type_reference: $ => seq(
       '&',
       choice('mut', 'const'),
-      $.type,
+      $.type_item,
     ),
 
     type_pointer: $ => seq(
       '*',
       choice('mut', 'const'),
-      $.type,
+      $.type_item,
     ),
 
     type_array: $ => seq(
@@ -359,7 +366,7 @@ module.exports = grammar({
       )),
       ']',
       choice('mut', 'const'),
-      $.type,
+      $.type_item,
     ),
 
     type_terminal: $ => seq(
@@ -451,6 +458,12 @@ module.exports = grammar({
       ';',
     ),
 
+    let_else_declaration: $ => seq(
+      $.if_condition_let,
+      'else',
+      $.block_expression,
+    ),
+
     null_statement: _ => ';',
 
     expression_statement: $ => seq(
@@ -498,9 +511,12 @@ module.exports = grammar({
       $.deferrable_statement,
     ),
 
-    errdefer_statement: $ => seq(
-      'errdefer',
-      $.deferrable_statement,
+    test_statement: $ => seq(
+      'test',
+      $.string,
+      '{',
+      repeat($.statement),
+      '}',
     ),
 
     attribute_statement: $ => seq(
@@ -628,7 +644,7 @@ module.exports = grammar({
       ),
     ),
 
-    if_expression: $ => seq(
+    if_expression: $ => prec.left(seq(
       optional('const'),
       'if',
       $.if_condition,
@@ -643,7 +659,7 @@ module.exports = grammar({
         'else',
         $.block_expression,
       )),
-    ),
+    )),
 
     if_condition: $ => choice(
       $.if_condition_let,
