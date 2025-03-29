@@ -42,6 +42,11 @@ module.exports = grammar({
     /\s/,
   ],
 
+  precedences: $ => [
+    [$.as_expression, $.return_expression], // return A as B
+    [$.as_expression, $.break_expression], // break A as B
+  ],
+
   conflicts: $ => [
     [$.const_reference_member, $.simple_expression], // ident.ident
 
@@ -587,7 +592,9 @@ module.exports = grammar({
       $.return_expression,
       $.break_expression,
       $.continue_expression,
-      // FIXME: add more expressions
+      $.and_expression,
+      $.or_expression,
+      $.as_expression,
     ),
 
     simple_expression: $ => choice(
@@ -786,6 +793,24 @@ module.exports = grammar({
     continue_expression: $ => seq(
       'continue',
       optional($.label),
+    ),
+
+    and_expression: $ => seq(
+      $.simple_expression,
+      '&&',
+      $.simple_expression,
+    ),
+
+    or_expression: $ => seq(
+      $.simple_expression,
+      '||',
+      $.simple_expression,
+    ),
+
+    as_expression: $ => seq(
+      $.expression,
+      'as',
+      $.type,
     ),
 
     label: $ => seq(
