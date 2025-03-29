@@ -48,4 +48,6 @@ zig-out/
 
 
 # Custom
+/src
+/package-lock.json
 /Cargo.lock
