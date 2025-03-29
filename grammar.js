@@ -12,15 +12,15 @@
  * @param {String} sep
  * @returns {Rule}
  */
-function separatedRepeat1(rule, sep = ',') {
-  return seq(
+function separatedRepeat1(rule, sep = ',', allowTrailing = true) {
+  return seq(...[
     rule,
     repeat(seq(
       sep,
       rule,
     )),
-    optional(sep),
-  );
+    ...(allowTrailing ? [optional(sep)] : []),
+  ]);
 }
 
 /**
@@ -46,7 +46,7 @@ module.exports = grammar({
     [$.const_reference_member, $.simple_expression], // ident.ident
 
     // expression as statement
-    [$.block_statement, $.expression],
+    [$.block_statement, $.block_expression],
     [$.if_statement, $.expression],
     [$.loop_statement, $.expression],
     [$.match_statement, $.expression],
@@ -82,8 +82,9 @@ module.exports = grammar({
       $.attribute_statement,
     ),
 
-    // only deferrable_statements can be used after 'defer', 'errdefer'
+    // only deferrable_statements can be used after 'defer'
     deferrable_statement: $ => choice(
+      $.block_statement,
       $.expression_statement,
       $.assignment_statement,
       $.if_statement,
@@ -507,6 +508,7 @@ module.exports = grammar({
 
     defer_statement: $ => seq(
       'defer',
+      optional(seq(':', separatedRepeat1($.label, ',', false))),
       optional($.label),
       $.deferrable_statement,
     ),
@@ -731,6 +733,7 @@ module.exports = grammar({
 
     return_expression: $ => seq(
       'return',
+      optional(seq(':', $.label)),
       optional($.expression),
     ),
 
