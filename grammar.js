@@ -365,12 +365,14 @@ module.exports = grammar({
 
     type_reference: $ => seq(
       '&',
+      choice('!', '?'),
       choice('mut', 'const'),
       $.type_item,
     ),
 
     type_pointer: $ => seq(
       '*',
+      choice('!', '?'),
       choice('mut', 'const'),
       $.type_item,
     ),
