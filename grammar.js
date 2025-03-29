@@ -249,10 +249,10 @@ module.exports = grammar({
     ),
 
     // or-parameter will be checked for each member
-    template_parameter_or: $ => separatedRepeat1($.template_parameter_and, '|'),
+    template_parameter_or: $ => separatedRepeat1($.template_parameter_and, '|', false),
 
     // and-parameter may contain traits only
-    template_parameter_and: $ => separatedRepeat1($.template_parameter_item, '&'),
+    template_parameter_and: $ => separatedRepeat1($.template_parameter_item, '&', false),
 
     template_parameter_item: $ => choice(
       $.template_parameter_parenthesis,
@@ -287,23 +287,34 @@ module.exports = grammar({
       )),
       optional(seq(
         '=',
-        $.type,
+        $.generic_argument,
       )),
     ),
 
     // terminal: single vtable, tuple: multiple vtables
     generic_parameter_item: $ => choice(
-      $.generic_parameter_tuple,
       $.generic_parameter_terminal,
+      $.generic_parameter_tuple,
+      $.generic_parameter_array,
     ),
 
     generic_parameter_tuple: $ => seq(
       '(',
-      separatedRepeat1($.generic_parameter_terminal),
+      separatedRepeat1($.generic_parameter_tuple_item),
       ')',
     ),
 
-    generic_parameter_terminal: $ => separatedRepeat1($.generic_parameter_terminal_item, '&'),
+    generic_parameter_tuple_item: $ => choice(
+      $.generic_parameter_array,
+    ),
+
+    generic_parameter_array: $ => seq(
+      '[',
+      separatedRepeat1($.generic_parameter_item),
+      ']',
+    ),
+
+    generic_parameter_terminal: $ => separatedRepeat1($.generic_parameter_terminal_item, '&', false),
 
     generic_parameter_terminal_item: $ => seq(
       $.const_reference,
@@ -318,14 +329,14 @@ module.exports = grammar({
 
     fn_parameter: $ => choice(
       seq(
-        optional(seq('&', choice('mut', 'const'),)),
+        optional(seq(choice('&', '*'), choice('mut', 'const'))),
         'self',
       ),
       seq(
         $.identifier,
         ':',
         $.type,
-      )
+      ),
     ),
 
     type: $ => choice(
@@ -384,8 +395,37 @@ module.exports = grammar({
 
     generic_arguments: $ => seq(
       '<',
-      separatedRepeat($.type),
+      separatedRepeat($.generic_argument),
       '>',
+    ),
+
+    generic_argument: $ => choice(
+      $.generic_argument_terminal,
+      $.generic_argument_tuple,
+      $.generic_argument_array,
+    ),
+
+    generic_argument_tuple: $ => seq(
+      '(',
+      separatedRepeat1($.generic_argument_tuple_item),
+      ')',
+    ),
+
+    generic_argument_tuple_item: $ => choice(
+      $.generic_argument_array,
+    ),
+
+    generic_argument_array: $ => seq(
+      '[',
+      separatedRepeat1($.generic_argument),
+      ']',
+    ),
+
+    generic_argument_terminal: $ => separatedRepeat1($.generic_argument_terminal_item, '&', false),
+
+    generic_argument_terminal_item: $ => seq(
+      $.const_reference,
+      optional($.generic_arguments),
     ),
 
     fn_arguments: $ => seq(
