@@ -4,7 +4,7 @@ endif
 
 LANGUAGE_NAME := tree-sitter-ziust
 HOMEPAGE_URL := https://github.com/ziust/tree-sitter.git
-VERSION := 0.1.0
+VERSION := 0.0.1
 
 # repository
 SRC_DIR := src

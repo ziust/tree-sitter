@@ -1,6 +1,6 @@
 {
   "name": "tree-sitter-ziust",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Ziust grammar for tree-sitter",
   "repository": "https://github.com/ziust/tree-sitter.git",
   "license": "MIT",
