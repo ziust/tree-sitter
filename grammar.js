@@ -141,7 +141,7 @@ module.exports = grammar({
     // (u8) in `enum MyEnum(u8) { MAX = 255 }`
     enum_member_declaration_parameter: $ => seq(
       '(',
-      $.const_reference,
+      $.type,
       ')',
     ),
 
@@ -247,10 +247,6 @@ module.exports = grammar({
         ':',
         $.template_parameter_or,
       )),
-      optional(seq(
-        '=', // default type
-        $.type,
-      )),
     ),
 
     // or-parameter will be checked for each member
@@ -288,10 +284,6 @@ module.exports = grammar({
       $.identifier,
       optional(seq(
         ':',
-        $.generic_argument,
-      )),
-      optional(seq(
-        '=',
         $.generic_argument,
       )),
     ),
@@ -426,10 +418,8 @@ module.exports = grammar({
       optional('pub'),
       'const',
       $.identifier,
-      optional(seq(
-        ':',
-        $.type,
-      )),
+      ':',
+      $.type,
       '=',
       $.expression,
       ';',
@@ -502,13 +492,13 @@ module.exports = grammar({
       $.pattern,
       'in',
       $.simple_expression,
-      $.block_expression,
+      $.block_statement,
     ),
 
     while_statement: $ => seq(
       'while',
       $.simple_expression,
-      $.block_expression,
+      $.block_statement,
     ),
 
     loop_statement: $ => $.loop_expression,
@@ -694,9 +684,15 @@ module.exports = grammar({
     ),
 
     pattern: $ => choice(
-      $.identifier,
+      $.pattern_terminal,
       $.pattern_enum,
       $.pattern_struct,
+    ),
+
+    pattern_terminal: $ => seq(
+      optional('mut'),
+      // TODO:
+      $.identifier,
     ),
 
     pattern_enum: $ => seq(
